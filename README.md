@@ -6,8 +6,11 @@ Both STEP and STL files can be found inside the 3D Models folder. Each STEP file
 For the electronics components, virtually any microcontroller with an ESP32 enabled chip will do, as well as any addressable LEDs, but to take advantage of the compact electronics enclosure I designed as well as the code I wrote, I recommend the following components:
 
 The Unexpected Maker TinyPICO V2
+
 144/metre Neopixel LED Strips
+
 Adafruit USB-C Breakout Board
+
 A simple Slide Switch
 
 
