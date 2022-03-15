@@ -1,4 +1,4 @@
-# Clean-Air-Necklace
+# The GFA Clean Air Necklace
 Files and information for creating the GFA Clean Air Necklace with the Design Spark Environmental Sensor Development Kit.
 
 Both STEP and STL files can be found inside the 3D Models folder. Each STEP file contains all relevant models for that part of the project. Any adjustments to sizing or design changes can be made therein. Otherwise, for simple printing, individual STLs are provided, unsliced. One .3MF file has been provided for the clear top panels which is preset with the settings to create an alternating Hilbert Curve pattern for creating diffusion. Simply import the other top panel STLs into this file once opened to print with the same settings.
