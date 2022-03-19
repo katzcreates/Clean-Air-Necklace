@@ -384,7 +384,7 @@ void reconnectWiFi() {
 boolean reconnectMQTT() {
   Serial.print("Attempting connection to MQTT broker: ");
   Serial.println(broker);
-  if (mqttClient.connect("arduinoClient")) {
+  if (mqttClient.connect("necklaceClient")) {
     mqttClient.subscribe("airquality/#");
     Serial.println("connected");
   }
