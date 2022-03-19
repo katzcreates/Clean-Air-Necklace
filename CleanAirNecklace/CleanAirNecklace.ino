@@ -44,8 +44,8 @@ byte gridIndexHorizontal(byte x, byte y) {
 }
 
 // ESDK MQTT Connection
-const char broker[] = "192.168.237.78"; // Replace with the local IP of your sensor
-//const char broker[] = "airquality";
+//const char broker[] = "255.255.255.255"; // Replace with the local IP of your sensor
+const char broker[] = "airquality";
 int        port     = 1883;
 #define TOPIC "airquality/#"
 
