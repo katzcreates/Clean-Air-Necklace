@@ -226,7 +226,6 @@ void draw() {
 }
 
 void setup() {
-
   Serial.begin(115200);
 #ifdef DEBUG
   while (!Serial) {
@@ -234,26 +233,6 @@ void setup() {
   }
 #endif
   delay(10);
-
-  // We start by connecting to a WiFi network
-
-  Serial.println();
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-
-  WiFi.begin(ssid, pass);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
-
 
   FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
 
@@ -266,7 +245,6 @@ void setup() {
   mqttClient.setServer(broker, port);
   mqttClient.setCallback(callback);
   mqttClient.setBufferSize(384);
-
 }
 
 // Base Animation Patterns get set here! Add your own if you want!
@@ -397,11 +375,13 @@ void combinePatterns() {
   }
 }
 
-
+// Connecting to a WiFi network
 void reconnectWiFi() {
 #ifdef DEBUG
   Serial.print("Wifi Status: ");
   Serial.println(WiFi.status());
+  Serial.print("Trying connection to ");
+  Serial.println(ssid);
 #endif
   // WL_IDLE_STATUS     = 0
   // WL_NO_SSID_AVAIL   = 1
