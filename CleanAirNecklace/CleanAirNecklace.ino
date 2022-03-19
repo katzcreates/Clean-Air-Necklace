@@ -3,7 +3,7 @@
 #include "secrets.h"
 #include "ArduinoJson.h"
 
-#define DEBUG 1
+#define DEBUG
 
 // Nano 33 IoT compatibility
 #if defined(ARDUINO_ARCH_SAMD)
@@ -228,6 +228,11 @@ void draw() {
 void setup() {
 
   Serial.begin(115200);
+#ifdef DEBUG
+  while (!Serial) {
+    ; // wait for serial port to connect
+  }
+#endif
   delay(10);
 
   // We start by connecting to a WiFi network
@@ -315,12 +320,14 @@ void loop()
     mqttClient.loop();
   }
 
+#ifdef DEBUG
   // This can be used to help debug problems with the sensor connection if needed.
   EVERY_N_SECONDS(10) {
     Serial.print("TEST: ");
     Serial.print(pm);
     Serial.println();
   }
+#endif
 
   basePattern();
   overlayPattern();
