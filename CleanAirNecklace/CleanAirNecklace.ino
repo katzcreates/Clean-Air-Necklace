@@ -6,7 +6,7 @@
 
 #define DEBUG 1
 
-#define DATA_PIN 33 
+#define DATA_PIN 33
 #define BRIGHTNESS 32 // Universal LED brightness override
 #define NUM_LEDS 185
 
@@ -76,14 +76,15 @@ int threshold = 12;
 
 // Custom FastLED Palette
 DEFINE_GRADIENT_PALETTE( warning_p ) {
-    0, 255,249, 155,
-    30, 255,102, 0,
+  0, 255, 249, 155,
+  30, 255, 102, 0,
   120, 255, 102,  0,
   205,  255,  0,  0,
   229, 217, 5, 102,
-  255, 149, 0, 46};
+  255, 149, 0, 46
+};
 
- CRGBPalette16 myPal = warning_p;
+CRGBPalette16 myPal = warning_p;
 
 
 
@@ -98,7 +99,7 @@ class Star {
     int hue;
     int saturation;
 
-  
+
 
     void restart() {
       z = random(1, 4);
@@ -109,9 +110,9 @@ class Star {
       startY = y;
       x = random(0, LED_COLS);
       startTime = millis();
-      pm = constrain(pm, 0, 500); 
+      pm = constrain(pm, 0, 500);
       colorIndex = map(pm, 12, 500, 0, 240);
-      pmColor = ColorFromPalette(myPal, colorIndex,LINEARBLEND);
+      pmColor = ColorFromPalette(myPal, colorIndex, LINEARBLEND);
 
     }
 
@@ -220,28 +221,28 @@ void draw() {
 void setup() {
 
   Serial.begin(115200);
-    delay(10);
+  delay(10);
 
-    // We start by connecting to a WiFi network
+  // We start by connecting to a WiFi network
 
-    Serial.println();
-    Serial.println();
-    Serial.print("Connecting to ");
-    Serial.println(ssid);
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
 
-    WiFi.begin(ssid, pass);
+  WiFi.begin(ssid, pass);
 
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
 
-    Serial.println("");
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
 
-  
+
   FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS); /
 
   FastLED.setBrightness(BRIGHTNESS);
@@ -253,7 +254,7 @@ void setup() {
   mqttClient.setServer(broker, port);
   mqttClient.setCallback(callback);
   mqttClient.setBufferSize(384);
-  
+
 }
 
 // Base Animation Patterns get set here! Add your own if you want!
@@ -265,9 +266,9 @@ void outwardOcean() {
 }
 
 typedef void (*SimplePatternList[])();
-SimplePatternList gPatterns = { 
+SimplePatternList gPatterns = {
   outwardOcean
- };
+};
 
 void nextPattern()
 {
@@ -288,13 +289,13 @@ void loop()
   // WL_CONNECTION_LOST = 5
   // WL_DISCONNECTED    = 6
 
-  
 
-   if (WiFi.status() != WL_CONNECTED) {
+
+  if (WiFi.status() != WL_CONNECTED) {
     reconnectWiFi();
   }
 
-   if (!mqttClient.connected()) {
+  if (!mqttClient.connected()) {
     // Attempt to reconnect without blocking
     long now = millis();
     if (now - lastReconnectMQTTAttempt > 5000) {
@@ -307,22 +308,22 @@ void loop()
     mqttClient.loop();
   }
 
-// This can be used to help debug problems with the sensor connection if needed.
-EVERY_N_SECONDS(10) {
-  Serial.print("TEST: ");
-  Serial.print(pm);
-  Serial.println();
-}
+  // This can be used to help debug problems with the sensor connection if needed.
+  EVERY_N_SECONDS(10) {
+    Serial.print("TEST: ");
+    Serial.print(pm);
+    Serial.println();
+  }
 
   basePattern();
   overlayPattern();
   combinePatterns();
-  
+
 
 }
 
 void basePattern() {
- gPatterns[gCurrentPatternNumber]();
+  gPatterns[gCurrentPatternNumber]();
 
   EVERY_N_MILLISECONDS( 20 ) {
     gHue++;  // slowly cycle the "base color" through the rainbow
@@ -331,53 +332,53 @@ void basePattern() {
   EVERY_N_SECONDS( 10 ) {
     nextPattern();  // change patterns periodically
   }
-  
+
 }//end_basePattern
 
 int fadeAmount1 = 0;
 int fadeAmount2 = 0;
 int maxFadeAmount1 = 255;
-int maxFadeAmount2 = 255; 
+int maxFadeAmount2 = 255;
 
 void overlayPattern() {  // This is where the Sparks animation gets triggered if the PM levels are above threshold
-  if (pm>threshold) {  
-    
+  if (pm > threshold) {
+
     fadeToBlackBy( leds, NUM_LEDS, fadeAmount1);
 
-    EVERY_N_MILLISECONDS(30) {   
-      if(fadeAmount1<maxFadeAmount1) {
-      fadeAmount1++;
-    }
+    EVERY_N_MILLISECONDS(30) {
+      if (fadeAmount1 < maxFadeAmount1) {
+        fadeAmount1++;
+      }
     }
 
 
-    
+
     EVERY_N_MILLIS(30) {
-    gHue++;
+      gHue++;
+    }
+
+    Starfield::draw();
   }
 
-  Starfield::draw();
-    }
-  
 
-   else {  //overlay is currently "Off"
+  else {  //overlay is currently "Off"
     fadeToBlackBy( leds, NUM_LEDS, fadeAmount1);
-    EVERY_N_MILLISECONDS(20) {   
-      if(fadeAmount1>0) {
-      fadeAmount1--;
-    }
+    EVERY_N_MILLISECONDS(20) {
+      if (fadeAmount1 > 0) {
+        fadeAmount1--;
+      }
     }
     fadeToBlackBy( overlay, NUM_LEDS, fadeAmount2);
     EVERY_N_MILLISECONDS(30) {
-      if(fadeAmount2<maxFadeAmount2) {
+      if (fadeAmount2 < maxFadeAmount2) {
         fadeAmount2++;  //fadeout overlay pattern
       }
     }
   }
 }
-  
+
 void combinePatterns() {
-  for (uint8_t i=0; i<NUM_LEDS; i++) {
+  for (uint8_t i = 0; i < NUM_LEDS; i++) {
     leds[i] += overlay[i];  //add overlay to leds
   }
 }
