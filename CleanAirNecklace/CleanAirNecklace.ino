@@ -17,6 +17,10 @@
 #define BRIGHTNESS 32 // Universal LED brightness override
 #define NUM_LEDS 185
 
+#define MAX_TRIES 3 // Number of WiFi connection tries
+#define PM_MAX 500  // Max PM value
+#define PM_INTERVAL 1 // Change PM value every second
+
 CRGB leds[NUM_LEDS];
 CRGB base[NUM_LEDS];
 CRGB overlay[NUM_LEDS];
@@ -231,6 +235,7 @@ void setup() {
   while (!Serial) {
     ; // wait for serial port to connect
   }
+  Serial.println("Starting Clean Air Necklace");
 #endif
   delay(10);
 
@@ -263,25 +268,39 @@ void nextPattern()
   gCurrentPatternNumber = (gCurrentPatternNumber + 1) % ARRAY_SIZE( gPatterns);
 }
 
+int tries = 0; // Connection counter
+
 void loop()
 {
   FastLED.show();
 
-  if (WiFi.status() != WL_CONNECTED) {
-    reconnectWiFi();
-  }
+  // Enter demo mode if there's no WiFi
+  if (tries < MAX_TRIES) {
 
-  if (!mqttClient.connected()) {
-    // Attempt to reconnect without blocking
-    long now = millis();
-    if (now - lastReconnectMQTTAttempt > 5000) {
-      lastReconnectMQTTAttempt = now;
-      if (reconnectMQTT()) {
-        lastReconnectMQTTAttempt = 0;
-      }
+    if (WiFi.status() != WL_CONNECTED) {
+      tries++;
+      Serial.print("Tries: ");
+      Serial.println(tries);
+      reconnectWiFi();
     }
-  } else {
-    mqttClient.loop();
+
+    if (!mqttClient.connected()) {
+      // Attempt to reconnect without blocking
+      long now = millis();
+      if (now - lastReconnectMQTTAttempt > 5000) {
+        lastReconnectMQTTAttempt = now;
+        if (reconnectMQTT()) {
+          lastReconnectMQTTAttempt = 0;
+        }
+      }
+    } else {
+      mqttClient.loop();
+    }
+
+  } else {  // Simulate PM values if there's no WiFi connection!
+    EVERY_N_SECONDS(PM_INTERVAL) {
+      demoAction();
+    }
   }
 
 #ifdef DEBUG
@@ -298,6 +317,14 @@ void loop()
   combinePatterns();
 
 
+}
+
+void demoAction() {
+  if (pm < PM_MAX) {
+    pm += 1;
+  } else {  // Reset pm
+    pm = 0;
+  }
 }
 
 void basePattern() {
@@ -400,7 +427,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
   //  for (int i = 0; i < length; i++) {
   //    Serial.print((char)payload[i]);
   //  }
-//  Serial.println();
+  //  Serial.println();
 #endif
   // ESDK sends a large JSON payload
   // - ensure you have enough memory allocated
