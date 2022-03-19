@@ -287,7 +287,7 @@ void loop()
 #ifdef DEBUG
   // This can be used to help debug problems with the sensor connection if needed.
   EVERY_N_SECONDS(10) {
-    Serial.print("TEST: ");
+    Serial.print("PM2.5: ");
     Serial.print(pm);
     Serial.println();
   }
@@ -386,20 +386,21 @@ boolean reconnectMQTT() {
   Serial.println(broker);
   if (mqttClient.connect("necklaceClient")) {
     mqttClient.subscribe("airquality/#");
-    Serial.println("connected");
+    Serial.println("MQTT connected");
   }
   return mqttClient.connected();
 }
 
 void callback(char* topic, byte * payload, unsigned int length) {
 #ifdef DEBUG
-  Serial.print("Message arrived [");
-  Serial.print(topic);
-  Serial.print("] ");
-  for (int i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
-  }
-  Serial.println();
+  Serial.println("Message");
+  //  Serial.print("Message arrived [");
+  //  Serial.print(topic);
+  //  Serial.print("] ");
+  //  for (int i = 0; i < length; i++) {
+  //    Serial.print((char)payload[i]);
+  //  }
+//  Serial.println();
 #endif
   // ESDK sends a large JSON payload
   // - ensure you have enough memory allocated
