@@ -239,9 +239,6 @@ void setup() {
   FastLED.setBrightness(BRIGHTNESS);
   FastLED.clear();
 
-  Serial.print("Attempting to connect to the MQTT broker: ");
-  Serial.println(broker);
-
   mqttClient.setServer(broker, port);
   mqttClient.setCallback(callback);
   mqttClient.setBufferSize(384);
@@ -269,17 +266,6 @@ void nextPattern()
 void loop()
 {
   FastLED.show();
-
-
-  // WL_IDLE_STATUS     = 0
-  // WL_NO_SSID_AVAIL   = 1
-  // WL_SCAN_COMPLETED  = 2
-  // WL_CONNECTED       = 3
-  // WL_CONNECT_FAILED  = 4
-  // WL_CONNECTION_LOST = 5
-  // WL_DISCONNECTED    = 6
-
-
 
   if (WiFi.status() != WL_CONNECTED) {
     reconnectWiFi();
@@ -396,6 +382,8 @@ void reconnectWiFi() {
 }
 
 boolean reconnectMQTT() {
+  Serial.print("Attempting connection to MQTT broker: ");
+  Serial.println(broker);
   if (mqttClient.connect("arduinoClient")) {
     mqttClient.subscribe("airquality/#");
     Serial.println("connected");
