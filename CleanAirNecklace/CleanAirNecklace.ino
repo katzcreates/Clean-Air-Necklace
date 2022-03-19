@@ -1,12 +1,19 @@
 #include <PubSubClient.h>
-#include <WiFi.h>
 #include <FastLED.h>
 #include "secrets.h"
 #include "ArduinoJson.h"
 
 #define DEBUG 1
 
+// Nano 33 IoT compatibility
+#if defined(ARDUINO_ARCH_SAMD)
+#include <WiFiNINA.h>
+#define DATA_PIN 9
+#else
+#include <WiFi.h>
 #define DATA_PIN 33
+#endif
+
 #define BRIGHTNESS 32 // Universal LED brightness override
 #define NUM_LEDS 185
 
