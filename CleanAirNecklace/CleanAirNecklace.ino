@@ -16,10 +16,14 @@
 
 #define BRIGHTNESS 32 // Universal LED brightness override
 #define NUM_LEDS 185
-
-#define MAX_TRIES 3 // Number of WiFi connection tries
+#define NUMBER_OF_STARS 36
 #define PM_MAX 500  // Max PM value
+#define PM_THRESHOLD 12
+
+// Demo macros
+#define MAX_TRIES 3 // Number of WiFi connection tries
 #define PM_INTERVAL 1 // Change PM value every second
+#define PM_INCREMENT 1 // Amount PM changes each interval
 
 CRGB leds[NUM_LEDS];
 CRGB base[NUM_LEDS];
@@ -83,8 +87,6 @@ int wifiState = WL_IDLE_STATUS;
 //int tvoc = 0;
 int pm = 0;
 
-int threshold = 12;
-
 // Custom FastLED Palette
 DEFINE_GRADIENT_PALETTE( warning_p ) {
   0, 255, 249, 155,
@@ -121,10 +123,9 @@ class Star {
       startY = y;
       x = random(0, LED_COLS);
       startTime = millis();
-      pm = constrain(pm, 0, 500);
-      colorIndex = map(pm, 12, 500, 0, 240);
+      pm = constrain(pm, 0, PM_MAX);
+      colorIndex = map(pm, PM_THRESHOLD, PM_MAX, 0, 240); // Not sure if this is correct??
       pmColor = ColorFromPalette(myPal, colorIndex, LINEARBLEND);
-
     }
 
     void start() {
@@ -156,8 +157,6 @@ class Star {
       return 0.2 + 0.4 * (z - 1);
     }
 };
-
-#define NUMBER_OF_STARS 36
 
 namespace Starfield {
 Star stars[NUMBER_OF_STARS] = {};
@@ -275,6 +274,8 @@ void loop()
   FastLED.show();
 
   // Enter demo mode if there's no WiFi
+  // This skips the Wifi connection attemps after MAX_TRIES
+  // and starts using demoAction() to simulate PM values
   if (tries < MAX_TRIES) {
 
     if (WiFi.status() != WL_CONNECTED) {
@@ -321,7 +322,7 @@ void loop()
 
 void demoAction() {
   if (pm < PM_MAX) {
-    pm += 1;
+    pm += PM_INCREMENT;
   } else {  // Reset pm
     pm = 0;
   }
@@ -346,7 +347,7 @@ int maxFadeAmount1 = 255;
 int maxFadeAmount2 = 255;
 
 void overlayPattern() {  // This is where the Sparks animation gets triggered if the PM levels are above threshold
-  if (pm > threshold) {
+  if (pm > PM_THRESHOLD) {
 
     fadeToBlackBy( leds, NUM_LEDS, fadeAmount1);
 
