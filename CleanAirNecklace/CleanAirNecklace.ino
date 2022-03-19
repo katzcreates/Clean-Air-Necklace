@@ -243,7 +243,7 @@ void setup() {
   Serial.println(WiFi.localIP());
 
 
-  FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS); /
+  FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
 
   FastLED.setBrightness(BRIGHTNESS);
   FastLED.clear();
@@ -423,10 +423,11 @@ void callback(char* topic, byte * payload, unsigned int length) {
   // - ensure you have enough memory allocated
   StaticJsonDocument<384> doc;
   deserializeJson(doc, payload, length);
-  co2 = doc["co2"]["co2"];
-  temperature = doc["thv"]["temperature"];
-  humidity = doc["thv"]["humidity"];
-  tvoc = doc["thv"]["vocIndex"];
+  // Unused ESDK values
+  //  co2 = doc["co2"]["co2"];
+  //  temperature = doc["thv"]["temperature"];
+  //  humidity = doc["thv"]["humidity"];
+  //  tvoc = doc["thv"]["vocIndex"];
   pm = doc["pm"]["pm2.5"];
 
 
