@@ -22,7 +22,7 @@
 
 // Demo stuff
 #define PM_INCREMENT 15 // Amount PM changes each interval
-#define PM_INTERVAL 1 // Change PM value every second
+#define PM_INTERVAL 500 // Change PM every N ms
 #define NEC_CONNECTED 0  // Connected mode
 #define NEC_DEMO 1  // Demo mode
 #define PM_CYCLE_INTERVAL 30 // Cycle interval in seconds  
@@ -371,7 +371,7 @@ void changePmCycle(int interval) {
 // Increment PM every interval (demo mode)
 void incPM(int interval, int increment) {
   if (pm < PM_MAX) {
-    EVERY_N_SECONDS(interval) {
+    EVERY_N_MILLISECONDS(interval) {
       pm += increment;
     }
   }
@@ -386,7 +386,7 @@ void decPM(int interval, int increment) {
     pm = 1;
   }
   else {
-    EVERY_N_SECONDS(interval) {
+    EVERY_N_MILLISECONDS(interval) {
       pm -= increment;
     }
   }
