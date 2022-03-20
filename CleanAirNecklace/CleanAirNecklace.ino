@@ -256,12 +256,13 @@ void setup() {
   WiFi.begin(ssid, pass);
 
   while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.println(WiFi.status());
     if ((WiFi.status() == WL_CONNECT_FAILED) || (WiFi.status() == WL_NO_SSID_AVAIL)) {
       mode = NEC_DEMO;
       Serial.println("Entering demo mode");
       break;
     }
-    delay(500);
     Serial.print(".");
   }
 
