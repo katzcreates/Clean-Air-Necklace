@@ -1,14 +1,32 @@
 #include <PubSubClient.h>
-#include <WiFi.h>
 #include <FastLED.h>
 #include "secrets.h"
 #include "ArduinoJson.h"
 
-#define DEBUG 1
+#define DEBUG
 
-#define DATA_PIN 33 
+// Nano 33 IoT compatibility
+#if defined(ARDUINO_ARCH_SAMD)
+#include <WiFiNINA.h>
+#define DATA_PIN 9
+#else
+#include <WiFi.h>
+#define DATA_PIN 33
+#endif
+
 #define BRIGHTNESS 32 // Universal LED brightness override
 #define NUM_LEDS 185
+#define NUMBER_OF_STARS 36
+#define PM_MAX 500  // Max PM value
+#define PM_THRESHOLD 12
+
+// Demo stuff
+#define PM_INCREMENT 10 // Amount PM changes each interval
+#define PM_INTERVAL 500 // Change PM every N milliseconds
+#define NEC_CONNECTED 0  // Connected mode
+#define NEC_DEMO 1  // Demo mode
+#define PM_CYCLE_INTERVAL 30 // Cycle interval in seconds  
+int mode = NEC_DEMO;  // Default to demo mode
 
 CRGB leds[NUM_LEDS];
 CRGB base[NUM_LEDS];
@@ -44,8 +62,8 @@ byte gridIndexHorizontal(byte x, byte y) {
 }
 
 // ESDK MQTT Connection
-const char broker[] = "192.168.237.78"; // Replace with the local IP of your sensor
-//const char broker[] = "airquality";
+//const char broker[] = "255.255.255.255"; // Replace with the local IP of your sensor
+const char broker[] = "airquality";
 int        port     = 1883;
 #define TOPIC "airquality/#"
 
@@ -72,18 +90,17 @@ int wifiState = WL_IDLE_STATUS;
 //int tvoc = 0;
 int pm = 0;
 
-int threshold = 12;
-
 // Custom FastLED Palette
 DEFINE_GRADIENT_PALETTE( warning_p ) {
-    0, 255,249, 155,
-    30, 255,102, 0,
+  0, 255, 249, 155,
+  60, 255, 102, 0,
   120, 255, 102,  0,
-  205,  255,  0,  0,
-  229, 217, 5, 102,
-  255, 149, 0, 46};
+  180,  255,  0,  0,
+  220, 217, 5, 102,
+  255, 149, 0, 46
+};
 
- CRGBPalette16 myPal = warning_p;
+CRGBPalette16 myPal = warning_p;
 
 
 
@@ -98,7 +115,7 @@ class Star {
     int hue;
     int saturation;
 
-  
+
 
     void restart() {
       z = random(1, 4);
@@ -109,10 +126,9 @@ class Star {
       startY = y;
       x = random(0, LED_COLS);
       startTime = millis();
-      pm = constrain(pm, 0, 500); 
-      colorIndex = map(pm, 12, 500, 0, 240);
-      pmColor = ColorFromPalette(myPal, colorIndex,LINEARBLEND);
-
+      pm = constrain(pm, 0, PM_MAX);
+      colorIndex = map(pm, PM_THRESHOLD, PM_MAX, 0, 240); 
+      pmColor = ColorFromPalette(myPal, colorIndex, LINEARBLEND);
     }
 
     void start() {
@@ -124,7 +140,7 @@ class Star {
     void move() {
       unsigned long age = millis() - startTime;
       float speed = z * 10;
-      y = startY + age / 2500.0 * speed;
+      y = startY + age / 2300.0 * speed;
 
       hue++;
 
@@ -144,8 +160,6 @@ class Star {
       return 0.2 + 0.4 * (z - 1);
     }
 };
-
-#define NUMBER_OF_STARS 36
 
 namespace Starfield {
 Star stars[NUMBER_OF_STARS] = {};
@@ -218,42 +232,54 @@ void draw() {
 }
 
 void setup() {
-
   Serial.begin(115200);
-    delay(10);
+#ifdef DEBUG
+  while (!Serial) {
+    ; // wait for serial port to connect
+  }
+  Serial.println("Starting Clean Air Necklace");
+#endif
+  delay(10);
 
-    // We start by connecting to a WiFi network
+  // We start by connecting to a WiFi network
+  // WL_IDLE_STATUS     = 0
+  // WL_NO_SSID_AVAIL   = 1
+  // WL_SCAN_COMPLETED  = 2
+  // WL_CONNECTED       = 3
+  // WL_CONNECT_FAILED  = 4
+  // WL_CONNECTION_LOST = 5
+  // WL_DISCONNECTED    = 6
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
 
-    Serial.println();
-    Serial.println();
-    Serial.print("Connecting to ");
-    Serial.println(ssid);
+  WiFi.begin(ssid, pass);
 
-    WiFi.begin(ssid, pass);
-
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.println(WiFi.status());
+    if ((WiFi.status() == WL_CONNECT_FAILED) || (WiFi.status() == WL_NO_SSID_AVAIL)) {
+      mode = NEC_DEMO;
+      Serial.println("Entering demo mode");
+      break;
     }
+    Serial.print(".");
+  }
 
-    Serial.println("");
-    Serial.println("WiFi connected");
+  if (WiFi.status() == WL_CONNECTED) {
+    mode = NEC_CONNECTED;
+    Serial.println("Entering connected mode");
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
 
-  
-  FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS); /
+    mqttClient.setServer(broker, port);
+    mqttClient.setCallback(callback);
+    mqttClient.setBufferSize(384);
+  }
 
+  FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
   FastLED.setBrightness(BRIGHTNESS);
   FastLED.clear();
-
-  Serial.print("Attempting to connect to the MQTT broker: ");
-  Serial.println(broker);
-
-  mqttClient.setServer(broker, port);
-  mqttClient.setCallback(callback);
-  mqttClient.setBufferSize(384);
-  
 }
 
 // Base Animation Patterns get set here! Add your own if you want!
@@ -265,9 +291,9 @@ void outwardOcean() {
 }
 
 typedef void (*SimplePatternList[])();
-SimplePatternList gPatterns = { 
+SimplePatternList gPatterns = {
   outwardOcean
- };
+};
 
 void nextPattern()
 {
@@ -275,54 +301,99 @@ void nextPattern()
   gCurrentPatternNumber = (gCurrentPatternNumber + 1) % ARRAY_SIZE( gPatterns);
 }
 
+int pm_cycle = 0;
+
 void loop()
 {
   FastLED.show();
 
-
-  // WL_IDLE_STATUS     = 0
-  // WL_NO_SSID_AVAIL   = 1
-  // WL_SCAN_COMPLETED  = 2
-  // WL_CONNECTED       = 3
-  // WL_CONNECT_FAILED  = 4
-  // WL_CONNECTION_LOST = 5
-  // WL_DISCONNECTED    = 6
-
-  
-
-   if (WiFi.status() != WL_CONNECTED) {
-    reconnectWiFi();
-  }
-
-   if (!mqttClient.connected()) {
-    // Attempt to reconnect without blocking
-    long now = millis();
-    if (now - lastReconnectMQTTAttempt > 5000) {
-      lastReconnectMQTTAttempt = now;
-      if (reconnectMQTT()) {
-        lastReconnectMQTTAttempt = 0;
+  switch (mode) {
+    // Do connected stuff
+    case NEC_CONNECTED:
+      if (WiFi.status() != WL_CONNECTED) {
+        reconnectWiFi();
       }
-    }
-  } else {
-    mqttClient.loop();
+
+      if (!mqttClient.connected()) {
+        // Attempt to reconnect without blocking
+        long now = millis();
+        if (now - lastReconnectMQTTAttempt > 5000) {
+          lastReconnectMQTTAttempt = now;
+          if (reconnectMQTT()) {
+            lastReconnectMQTTAttempt = 0;
+          }
+        }
+      }
+      else {
+        mqttClient.loop();
+      }
+      break;
+
+    // Do demo stuff
+    case NEC_DEMO:
+      changePmCycle(PM_CYCLE_INTERVAL);
+      switch (pm_cycle) {
+        case 0:
+          pm = 1;
+          break;
+        case 1:
+          incPM(PM_INTERVAL, PM_INCREMENT);
+          break;
+        case 2:
+          decPM(PM_INTERVAL, PM_INCREMENT);
+          break;
+      }
   }
-
-// This can be used to help debug problems with the sensor connection if needed.
-EVERY_N_SECONDS(10) {
-  Serial.print("TEST: ");
-  Serial.print(pm);
-  Serial.println();
-}
-
+#ifdef DEBUG
+  // This can be used to help debug problems with the sensor connection if needed.
+  EVERY_N_SECONDS(1) {
+    Serial.print("PM2.5: ");
+    Serial.print(pm);
+    Serial.println();
+  }
+#endif
   basePattern();
   overlayPattern();
   combinePatterns();
-  
+}  // end loop
 
+
+// Change PM cycle every interval (demo mode)
+void changePmCycle(int interval) {
+  EVERY_N_SECONDS(interval) {
+    pm_cycle++;
+    if (pm_cycle > 2) {
+      pm_cycle = 0;
+    }
+  }
+}
+
+// Increment PM every interval (demo mode)
+void incPM(int interval, int increment) {
+  if (pm < PM_MAX) {
+    EVERY_N_MILLISECONDS(interval) {
+      pm += increment;
+    }
+  }
+  else {  // Hold at max pm
+    pm = PM_MAX;
+  }
+}
+
+// Decrement PM every interval (demo mode)
+void decPM(int interval, int increment) {
+  if (pm < 1) { // Hold at 1
+    pm = 1;
+  }
+  else {
+    EVERY_N_MILLISECONDS(interval) {
+      pm -= increment;
+    }
+  }
 }
 
 void basePattern() {
- gPatterns[gCurrentPatternNumber]();
+  gPatterns[gCurrentPatternNumber]();
 
   EVERY_N_MILLISECONDS( 20 ) {
     gHue++;  // slowly cycle the "base color" through the rainbow
@@ -331,101 +402,100 @@ void basePattern() {
   EVERY_N_SECONDS( 10 ) {
     nextPattern();  // change patterns periodically
   }
-  
+
 }//end_basePattern
 
 int fadeAmount1 = 0;
 int fadeAmount2 = 0;
 int maxFadeAmount1 = 255;
-int maxFadeAmount2 = 255; 
+int maxFadeAmount2 = 255;
 
 void overlayPattern() {  // This is where the Sparks animation gets triggered if the PM levels are above threshold
-  if (pm>threshold) {  
-    
+  if (pm > PM_THRESHOLD) {
+
     fadeToBlackBy( leds, NUM_LEDS, fadeAmount1);
 
-    EVERY_N_MILLISECONDS(30) {   
-      if(fadeAmount1<maxFadeAmount1) {
-      fadeAmount1++;
-    }
+    EVERY_N_MILLISECONDS(30) {
+      if (fadeAmount1 < maxFadeAmount1) {
+        fadeAmount1++;
+      }
     }
 
 
-    
+
     EVERY_N_MILLIS(30) {
-    gHue++;
+      gHue++;
+    }
+
+    Starfield::draw();
   }
 
-  Starfield::draw();
-    }
-  
 
-   else {  //overlay is currently "Off"
+  else {  //overlay is currently "Off"
     fadeToBlackBy( leds, NUM_LEDS, fadeAmount1);
-    EVERY_N_MILLISECONDS(20) {   
-      if(fadeAmount1>0) {
-      fadeAmount1--;
-    }
+    EVERY_N_MILLISECONDS(20) {
+      if (fadeAmount1 > 0) {
+        fadeAmount1--;
+      }
     }
     fadeToBlackBy( overlay, NUM_LEDS, fadeAmount2);
     EVERY_N_MILLISECONDS(30) {
-      if(fadeAmount2<maxFadeAmount2) {
+      if (fadeAmount2 < maxFadeAmount2) {
         fadeAmount2++;  //fadeout overlay pattern
       }
     }
   }
 }
-  
+
 void combinePatterns() {
-  for (uint8_t i=0; i<NUM_LEDS; i++) {
+  for (uint8_t i = 0; i < NUM_LEDS; i++) {
     leds[i] += overlay[i];  //add overlay to leds
   }
 }
 
-
+// Connecting to a WiFi network
 void reconnectWiFi() {
 #ifdef DEBUG
   Serial.print("Wifi Status: ");
   Serial.println(WiFi.status());
+  Serial.print("Trying connection to ");
+  Serial.println(ssid);
 #endif
-  // WL_IDLE_STATUS     = 0
-  // WL_NO_SSID_AVAIL   = 1
-  // WL_SCAN_COMPLETED  = 2
-  // WL_CONNECTED       = 3
-  // WL_CONNECT_FAILED  = 4
-  // WL_CONNECTION_LOST = 5
-  // WL_DISCONNECTED    = 6
   WiFi.disconnect();
   delay(10000);
   wifiState = WiFi.begin(ssid, pass);
 }
 
 boolean reconnectMQTT() {
-  if (mqttClient.connect("arduinoClient")) {
+  Serial.print("Attempting connection to MQTT broker: ");
+  Serial.println(broker);
+  if (mqttClient.connect("necklaceClient")) {
     mqttClient.subscribe("airquality/#");
-    Serial.println("connected");
+    Serial.println("MQTT connected");
   }
   return mqttClient.connected();
 }
 
 void callback(char* topic, byte * payload, unsigned int length) {
 #ifdef DEBUG
-  Serial.print("Message arrived [");
-  Serial.print(topic);
-  Serial.print("] ");
-  for (int i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
-  }
-  Serial.println();
+  Serial.println("Message");
+  //  Serial.print("Message arrived [");
+  //  Serial.print(topic);
+  //  Serial.print("] ");
+  //  for (int i = 0; i < length; i++) {
+  //    Serial.print((char)payload[i]);
+  //  }
+  //  Serial.println();
 #endif
   // ESDK sends a large JSON payload
   // - ensure you have enough memory allocated
   StaticJsonDocument<384> doc;
   deserializeJson(doc, payload, length);
-  co2 = doc["co2"]["co2"];
-  temperature = doc["thv"]["temperature"];
-  humidity = doc["thv"]["humidity"];
-  tvoc = doc["thv"]["vocIndex"];
+  // Unused ESDK values
+  //  co2 = doc["co2"]["co2"];
+  //  temperature = doc["thv"]["temperature"];
+  //  humidity = doc["thv"]["humidity"];
+  //  tvoc = doc["thv"]["vocIndex"];
   pm = doc["pm"]["pm2.5"];
 
 
