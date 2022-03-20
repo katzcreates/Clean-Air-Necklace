@@ -21,8 +21,8 @@
 #define PM_THRESHOLD 12
 
 // Demo stuff
-#define PM_INCREMENT 15 // Amount PM changes each interval
-#define PM_INTERVAL 500 // Change PM every N ms
+#define PM_INCREMENT 10 // Amount PM changes each interval
+#define PM_INTERVAL 500 // Change PM every N milliseconds
 #define NEC_CONNECTED 0  // Connected mode
 #define NEC_DEMO 1  // Demo mode
 #define PM_CYCLE_INTERVAL 30 // Cycle interval in seconds  
@@ -93,10 +93,10 @@ int pm = 0;
 // Custom FastLED Palette
 DEFINE_GRADIENT_PALETTE( warning_p ) {
   0, 255, 249, 155,
-  30, 255, 102, 0,
+  60, 255, 102, 0,
   120, 255, 102,  0,
-  205,  255,  0,  0,
-  229, 217, 5, 102,
+  180,  255,  0,  0,
+  220, 217, 5, 102,
   255, 149, 0, 46
 };
 
@@ -127,7 +127,7 @@ class Star {
       x = random(0, LED_COLS);
       startTime = millis();
       pm = constrain(pm, 0, PM_MAX);
-      colorIndex = map(pm, PM_THRESHOLD, PM_MAX, 0, 240); // Not sure if this is correct??
+      colorIndex = map(pm, PM_THRESHOLD, PM_MAX, 0, 240); 
       pmColor = ColorFromPalette(myPal, colorIndex, LINEARBLEND);
     }
 
@@ -140,7 +140,7 @@ class Star {
     void move() {
       unsigned long age = millis() - startTime;
       float speed = z * 10;
-      y = startY + age / 2500.0 * speed;
+      y = startY + age / 2300.0 * speed;
 
       hue++;
 
