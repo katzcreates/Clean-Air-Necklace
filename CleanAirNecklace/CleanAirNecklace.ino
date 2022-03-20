@@ -20,12 +20,12 @@
 #define PM_MAX 500  // Max PM value
 #define PM_THRESHOLD 12
 
-// Demo macros
-#define NEC_CONNECTED 0
-#define NEC_DEMO 1
+// Demo stuff
+#define PM_INCREMENT 15 // Amount PM changes each interval
 #define PM_INTERVAL 1 // Change PM value every second
-#define PM_INCREMENT 1 // Amount PM changes each interval
-
+#define NEC_CONNECTED 0  // Connected mode
+#define NEC_DEMO 1  // Demo mode
+#define PM_CYCLE_INTERVAL 30 // Cycle interval in seconds  
 int mode = NEC_DEMO;  // Default to demo mode
 
 CRGB leds[NUM_LEDS];
@@ -300,15 +300,15 @@ void nextPattern()
   gCurrentPatternNumber = (gCurrentPatternNumber + 1) % ARRAY_SIZE( gPatterns);
 }
 
-//int tries = 0; // Connection counter
+int pm_cycle = 0;
 
 void loop()
 {
   FastLED.show();
 
   switch (mode) {
+    // Do connected stuff
     case NEC_CONNECTED:
-      // do connected stuff
       if (WiFi.status() != WL_CONNECTED) {
         reconnectWiFi();
       }
@@ -322,34 +322,72 @@ void loop()
             lastReconnectMQTTAttempt = 0;
           }
         }
-      } else {
+      }
+      else {
         mqttClient.loop();
       }
-      basePattern();
-      overlayPattern();
-      combinePatterns();
       break;
 
+    // Do demo stuff
     case NEC_DEMO:
-      // Do demo stuff
-      ;
+      changePmCycle(PM_CYCLE_INTERVAL);
+      switch (pm_cycle) {
+        case 0:
+          pm = 1;
+          break;
+        case 1:
+          incPM(PM_INTERVAL, PM_INCREMENT);
+          break;
+        case 2:
+          decPM(PM_INTERVAL, PM_INCREMENT);
+          break;
+      }
   }
-
 #ifdef DEBUG
   // This can be used to help debug problems with the sensor connection if needed.
-  EVERY_N_SECONDS(10) {
+  EVERY_N_SECONDS(1) {
     Serial.print("PM2.5: ");
     Serial.print(pm);
     Serial.println();
   }
 #endif
+  basePattern();
+  overlayPattern();
+  combinePatterns();
 }  // end loop
 
-void demoAction() {
+
+// Change PM cycle every interval (demo mode)
+void changePmCycle(int interval) {
+  EVERY_N_SECONDS(interval) {
+    pm_cycle++;
+    if (pm_cycle > 2) {
+      pm_cycle = 0;
+    }
+  }
+}
+
+// Increment PM every interval (demo mode)
+void incPM(int interval, int increment) {
   if (pm < PM_MAX) {
-    pm += PM_INCREMENT;
-  } else {  // Reset pm
-    pm = 0;
+    EVERY_N_SECONDS(interval) {
+      pm += increment;
+    }
+  }
+  else {  // Hold at max pm
+    pm = PM_MAX;
+  }
+}
+
+// Decrement PM every interval (demo mode)
+void decPM(int interval, int increment) {
+  if (pm < 1) { // Hold at 1
+    pm = 1;
+  }
+  else {
+    EVERY_N_SECONDS(interval) {
+      pm -= increment;
+    }
   }
 }
 
