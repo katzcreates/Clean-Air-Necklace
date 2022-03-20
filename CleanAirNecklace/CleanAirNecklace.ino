@@ -21,9 +21,12 @@
 #define PM_THRESHOLD 12
 
 // Demo macros
-#define MAX_TRIES 3 // Number of WiFi connection tries
+#define NEC_CONNECTED 0
+#define NEC_DEMO 1
 #define PM_INTERVAL 1 // Change PM value every second
 #define PM_INCREMENT 1 // Amount PM changes each interval
+
+int mode = NEC_DEMO;  // Default to demo mode
 
 CRGB leds[NUM_LEDS];
 CRGB base[NUM_LEDS];
@@ -238,14 +241,44 @@ void setup() {
 #endif
   delay(10);
 
-  FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
+  // We start by connecting to a WiFi network
+  // WL_IDLE_STATUS     = 0
+  // WL_NO_SSID_AVAIL   = 1
+  // WL_SCAN_COMPLETED  = 2
+  // WL_CONNECTED       = 3
+  // WL_CONNECT_FAILED  = 4
+  // WL_CONNECTION_LOST = 5
+  // WL_DISCONNECTED    = 6
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
 
+  WiFi.begin(ssid, pass);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    if ((WiFi.status() == WL_CONNECT_FAILED) || (WiFi.status() == WL_NO_SSID_AVAIL)) {
+      mode = NEC_DEMO;
+      Serial.println("Entering demo mode");
+      break;
+    }
+    delay(500);
+    Serial.print(".");
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    mode = NEC_CONNECTED;
+    Serial.println("Entering connected mode");
+    Serial.println("IP address: ");
+    Serial.println(WiFi.localIP());
+
+    mqttClient.setServer(broker, port);
+    mqttClient.setCallback(callback);
+    mqttClient.setBufferSize(384);
+  }
+
+  FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
   FastLED.setBrightness(BRIGHTNESS);
   FastLED.clear();
-
-  mqttClient.setServer(broker, port);
-  mqttClient.setCallback(callback);
-  mqttClient.setBufferSize(384);
 }
 
 // Base Animation Patterns get set here! Add your own if you want!
@@ -267,41 +300,39 @@ void nextPattern()
   gCurrentPatternNumber = (gCurrentPatternNumber + 1) % ARRAY_SIZE( gPatterns);
 }
 
-int tries = 0; // Connection counter
+//int tries = 0; // Connection counter
 
 void loop()
 {
   FastLED.show();
 
-  // Enter demo mode if there's no WiFi
-  // This skips the Wifi connection attemps after MAX_TRIES
-  // and starts using demoAction() to simulate PM values
-  if (tries < MAX_TRIES) {
-
-    if (WiFi.status() != WL_CONNECTED) {
-      tries++;
-      Serial.print("Tries: ");
-      Serial.println(tries);
-      reconnectWiFi();
-    }
-
-    if (!mqttClient.connected()) {
-      // Attempt to reconnect without blocking
-      long now = millis();
-      if (now - lastReconnectMQTTAttempt > 5000) {
-        lastReconnectMQTTAttempt = now;
-        if (reconnectMQTT()) {
-          lastReconnectMQTTAttempt = 0;
-        }
+  switch (mode) {
+    case NEC_CONNECTED:
+      // do connected stuff
+      if (WiFi.status() != WL_CONNECTED) {
+        reconnectWiFi();
       }
-    } else {
-      mqttClient.loop();
-    }
 
-  } else {  // Simulate PM values if there's no WiFi connection!
-    EVERY_N_SECONDS(PM_INTERVAL) {
-      demoAction();
-    }
+      if (!mqttClient.connected()) {
+        // Attempt to reconnect without blocking
+        long now = millis();
+        if (now - lastReconnectMQTTAttempt > 5000) {
+          lastReconnectMQTTAttempt = now;
+          if (reconnectMQTT()) {
+            lastReconnectMQTTAttempt = 0;
+          }
+        }
+      } else {
+        mqttClient.loop();
+      }
+      basePattern();
+      overlayPattern();
+      combinePatterns();
+      break;
+
+    case NEC_DEMO:
+      // Do demo stuff
+      ;
   }
 
 #ifdef DEBUG
@@ -312,13 +343,7 @@ void loop()
     Serial.println();
   }
 #endif
-
-  basePattern();
-  overlayPattern();
-  combinePatterns();
-
-
-}
+}  // end loop
 
 void demoAction() {
   if (pm < PM_MAX) {
@@ -397,13 +422,6 @@ void reconnectWiFi() {
   Serial.print("Trying connection to ");
   Serial.println(ssid);
 #endif
-  // WL_IDLE_STATUS     = 0
-  // WL_NO_SSID_AVAIL   = 1
-  // WL_SCAN_COMPLETED  = 2
-  // WL_CONNECTED       = 3
-  // WL_CONNECT_FAILED  = 4
-  // WL_CONNECTION_LOST = 5
-  // WL_DISCONNECTED    = 6
   WiFi.disconnect();
   delay(10000);
   wifiState = WiFi.begin(ssid, pass);
