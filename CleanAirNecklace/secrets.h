@@ -1,2 +1,2 @@
-#define SECRET_SSID "YOURSSID"
-#define SECRET_PASS "YOURPASSWORD"
+#define SECRET_SSID "AIRQUALITY"
+#define SECRET_PASS "captainfantastic#"
