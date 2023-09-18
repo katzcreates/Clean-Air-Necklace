@@ -20,8 +20,16 @@ If going for the V2 build, a different microcontroller is required that can take
 
 - [Adafruit ItsyBitsy MO Express](https://www.adafruit.com/product/3727)
 
+You will also need a particulate matter sensor for V2. The one used in my code and most readily available is the PMS5003:
+
+- [PMS5003 Particulate Matter Sensor](https://shop.pimoroni.com/products/pms5003-particulate-matter-sensor-with-cable?variant=29075640352851)
+
+Otherwise the components are the same. V2 does require a second slide switch to provide a way to switch because live data readings and the demo mode provided in the code.
 
 
-The code provided will enable connection to WiFi, an MQTT broker hosted locally, and provide animations correspondant to PM 2.5 readings from a sensor. This is set up to work with the [DesignSpark ESDK](https://www.rs-online.com/designspark/introducing-the-environmental-sensor-development-kit) but the code can be changed to use the animation with another sensor. The code requires the FastLED library to function, which can be found [here](https://github.com/FastLED/FastLED). It is currently set up with two patterns; a base pattern when the PM levels are below a threshold, and an overlay for when PM levels exceed threshold. Additional patterns can be added to cycle through the base pattern easily within the code.
+
+The code provided for V1 will enable connection to WiFi, an MQTT broker hosted locally, and provide animations correspondant to PM 2.5 readings from a sensor. This is set up to work with the [DesignSpark ESDK](https://www.rs-online.com/designspark/introducing-the-environmental-sensor-development-kit). The code requires the FastLED library to function, which can be found [here](https://github.com/FastLED/FastLED). It is currently set up with two patterns; a base pattern when the PM levels are below a threshold, and an overlay for when PM levels exceed threshold. Additional patterns can be added to cycle through the base pattern easily within the code.
+
+The code for V2 also uses FastLED libraries for the animation (which is functionally the same as V1) but is set up to receive data from the PMS5003 and work with a slide switch to choose between live readings and the demo mode. This version does not require WiFi to work.
 
 The current PM threshold is set based on information set out by the US Environmental Protection agency, but are by no means definitive and can be altered to communicate data differently. Feel free to change the threshold within the code as you see fit.
